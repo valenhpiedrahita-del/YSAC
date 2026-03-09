@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco de Casos Clínicos EDI | YSA Colombia</title>
+    <style>
+        :root {
+            --ysa-blue: #0A1E3F;
+            --ysa-yellow: #FFC000;
+            --edi-light: #F4F7F6;
+            
+            /* Colores de Clasificación EDI */
+            --valid-bg: #E8F5E9;
+            --valid-border: #4CAF50;
+            --weak-bg: #FFF8E1;
+            --weak-border: #FFB300;
+            --noteval-bg: #ECEFF1;
+            --noteval-border: #78909C;
+            --invalid-bg: #FFEBEE;
+            --invalid-border: #F44336;
+            
+            --text-dark: #333333;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--edi-light);
+            color: var(--text-dark);
+        }
+
+        header {
+            background-color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 5px solid var(--ysa-yellow);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-container img { height: 50px; object-fit: contain; }
+        .logo-ysa { height: 55px !important; }
+
+        .header-title {
+            color: var(--ysa-blue);
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0;
+            padding-left: 20px;
+            border-left: 2px solid #eee;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-fullscreen {
+            background: var(--ysa-blue);
+            border: none;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .btn-fullscreen:hover { background: #153261; transform: translateY(-1px); }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 0;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 18px 25px;
+            background-color: #E0E5E9;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            color: #666;
+            transition: all 0.3s ease;
+            flex: 1;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { background-color: #d1d8dd; }
+
+        .tab-btn.active {
+            background-color: white;
+            color: var(--ysa-blue);
+            border-top: 5px solid var(--ysa-yellow);
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.03);
+            z-index: 10;
+            position: relative;
+        }
+
+        .profile-content {
+            display: none;
+            background-color: white;
+            padding: 40px;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #eee;
+            border-top: none;
+        }
+
+        .profile-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .context-box {
+            background-color: var(--ysa-blue);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            border-left: 6px solid var(--ysa-yellow);
+        }
+
+        .context-box h3 { margin-top: 0; margin-bottom: 12px; color: var(--ysa-yellow); font-size: 22px; }
+
+        /* Scenarios Styling */
+        .scenario-block {
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 2px dashed #eee;
+        }
+        .scenario-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        .hypothesis-box {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--ysa-blue);
+        }
+
+        .hypothesis-box h4 {
+            margin: 0 0 10px 0;
+            color: var(--ysa-blue);
+            text-transform: uppercase;
+            font-size: 15px;
+            letter-spacing: 1px;
+        }
+
+        .hypothesis-box p {
+            margin: 0;
+            font-size: 17px;
+            font-style: italic;
+            color: #444;
+            font-weight: 600;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .evidence-card {
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .evidence-card h5 { margin-top: 0; font-size: 16px; margin-bottom: 12px; }
+        .evidence-card p { margin: 0; font-size: 15px; line-height: 1.5; color: #333; }
+
+        .card-valid { background-color: var(--valid-bg); border-left: 6px solid var(--valid-border); }
+        .card-valid h5 { color: #2E7D32; }
+
+        .card-weak { background-color: var(--weak-bg); border-left: 6px solid var(--weak-border); }
+        .card-weak h5 { color: #F57F17; }
+
+        .card-noteval { background-color: var(--noteval-bg); border-left: 6px solid var(--noteval-border); }
+        .card-noteval h5 { color: #455A64; }
+
+        .card-invalid { background-color: var(--invalid-bg); border-left: 6px solid var(--invalid-border); }
+        .card-invalid h5 { color: #C62828; }
+
+        .tag-info {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.06);
+            margin-top: 15px;
+            align-self: flex-start;
+        }
+
+        @media (max-width: 900px) {
+            .grid-container { grid-template-columns: 1fr; }
+            header { flex-direction: column; gap: 15px; text-align: center; padding: 15px; }
+            .header-title { border-left: none; padding-left: 0; }
+        }
+        :fullscreen .container { max-width: 1600px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <img src="EDI - Plataforma-01.png" alt="Logo EDI">
+            <div class="header-title">BANCO DE CASOS (M1 al M3)</div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-fullscreen" onclick="toggleFullScreen()">📺 Pantalla Completa</button>
+            <img src="Copy of Logo - YOUTH STARTUP ACADEMY Colombia (1).png" alt="Logo YSA" class="logo-ysa">
+        </div>
+    </header>
+
+    <div class="container" id="main-container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab(event, 'perfil-a')">🔵 Perfil A: Los Ejecutores (B2B/SaaS)</button>
+            <button class="tab-btn" onclick="openTab(event, 'perfil-b')">🟡 Perfil B: Los Empíricos (Agro/Salud)</button>
+            <button class="tab-btn" onclick="openTab(event, 'perfil-c')">🟢 Perfil C: La Narrativa (Idea/Turismo)</button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PERFIL A: LOS EJECUTORES -->
+        <!-- ========================================== -->
+        <div id="perfil-a" class="profile-content active">
+            <div class="context-box">
+                <h3>Contexto: B2B, Industria o Fintech</h3>
+                <p><strong>Enfoque de Validación:</strong> Empresas con tracción inicial. El facilitador debe enfocarse en la eficiencia del modelo, fricción de precio corporativo y la capacidad de cerrar ventas reales, no promesas a largo plazo.</p>
+            </div>
+
+            <!-- Situación 1 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M1 - Tema 3: Arquitectura Comercial Básica (B2B)</h4>
+                    <p>💡 Hipótesis: "Podemos reducir el ciclo de ventas corporativo de 3 meses a 1 mes cobrando un piloto inicial de $500 USD."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Cerramos 2 pilotos en 20 días. Las empresas pagaron los $500 con tarjeta de crédito corporativa sin pasar por el comité de compras general."</p>
+                        <span class="tag-info">Verificación de transacción acelerada.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Ofrecimos el piloto a $500, pero los 5 prospectos dijeron que por políticas de compliance, cualquier pago, aunque sea de $1, requiere los 3 meses de alta de proveedor."</p>
+                        <span class="tag-info">Excelente hallazgo. Inviabilidad estructural del atajo.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Mandamos la propuesta del piloto a 10 empresas y 4 nos respondieron por correo que 'les interesa y lo van a revisar'."</p>
+                        <span class="tag-info">Interés declarado sin desembolso.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Decidimos darles el piloto gratis por 1 mes para que se enamoren del producto y luego sí cobrarles."</p>
+                        <span class="tag-info">Se evadió la prueba de cobrar. Experimento arruinado.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 2 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M1 - Tema 4: Finanzas - Pricing como Hipótesis</h4>
+                    <p>💡 Hipótesis: "Nuestro cliente no tiene fricción en pagar $1,000 USD por licencia anual si le garantizamos soporte 24/7."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Emitimos 3 facturas de renovación o primer cobro a $1,000 USD y 2 fueron pagadas sin solicitar descuento."</p>
+                        <span class="tag-info">Validación de precio mediante transacción.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"4 de 5 prospectos rebotaron la propuesta afirmando que el límite de caja menor de su gerencia es $500 USD y por encima de eso requieren firma de junta directiva."</p>
+                        <span class="tag-info">Se detectó el techo presupuestal real.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"El gerente de operaciones nos dijo en la reunión que $1,000 le parece un precio muy justo por la solución."</p>
+                        <span class="tag-info">Opinión de un actor sin poder de firma final.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Durante la negociación, el cliente dudó un segundo y nosotros le ofrecimos un descuento bajando a $300 USD para no perder la venta."</p>
+                        <span class="tag-info">Auto-sabotaje del experimento de precio.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 3 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M2 - Tema 1: Realidad de Mercado y Señales Externas</h4>
+                    <p>💡 Hipótesis: "Las empresas de logística pierden grandes sumas de dinero hoy por no tener enrutamiento en tiempo real."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Arqueología: El gerente nos mostró por pantalla su Excel de penalizaciones del mes pasado, perdiendo $3,000 USD en multas de clientes por entregas tardías."</p>
+                        <span class="tag-info">Cuantificación real del dolor en el mercado.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Auditamos a 3 empresas y vimos que ya usan un módulo básico de Google Maps gratuito que les resuelve el 95% del problema. No pierden dinero."</p>
+                        <span class="tag-info">El problema no es agudo ni requiere solución paga.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Un reporte de la consultora McKinsey de este año señala que la ineficiencia logística en la región genera pérdidas millonarias."</p>
+                        <span class="tag-info">Datos macroeconómicos, no evidencia de un cliente local.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Le preguntamos al gerente: '¿Cree usted que la ineficiencia logística le cuesta dinero a su empresa?' y nos contestó: 'Sí, claro'."</p>
+                        <span class="tag-info">Pregunta inducida. Sesgo de confirmación.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 4 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M3 - Tema 1: Presentación como Sistema de Prueba</h4>
+                    <p>💡 Hipótesis: "El dolor principal que genera acción en un comité técnico es la seguridad de datos, no la velocidad del software."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Al proyectar la lámina de 'Velocidad', nadie reaccionó. Al pasar a 'Cifrado de Datos', el CTO detuvo el pitch para hacer 3 preguntas técnicas de integración inmediata."</p>
+                        <span class="tag-info">Interrupción observable basada en interés real.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Nos saltamos el slide de Velocidad para ir al Cifrado y el CTO nos detuvo: 'No me importa el cifrado si esto pone lento mi ERP. ¿Qué latencia tienen?'."</p>
+                        <span class="tag-info">El mercado corrigió la prioridad del emprendedor.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Terminamos el pitch completo y al final todos asintieron con la cabeza diciendo que la plataforma es muy robusta."</p>
+                        <span class="tag-info">Validación social vacía, sin reacción específica.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"La regla de la reunión era dejar las preguntas para el final. Al final, se quedaron sin tiempo y se fueron a otra junta."</p>
+                        <span class="tag-info">El formato impidió medir la reacción emocional.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 5 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M3 - Tema 3: Presentación como Filtro de Continuidad</h4>
+                    <p>💡 Hipótesis: "El pitch comercial a gerencia generará la firma de un Acuerdo de Confidencialidad (NDA) para abrir datos de prueba."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Al finalizar la presentación, el director legal nos envió desde su computador el formato de NDA corporativo para revisión y firma el mismo día."</p>
+                        <span class="tag-info">Decisión externa que compromete a la contraparte.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Nos dijeron explícitamente: 'No firmamos NDAs ni abrimos datos con startups de menos de 3 años de operación por políticas de compliance'."</p>
+                        <span class="tag-info">Barrera corporativa real identificada.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"El contacto nos felicitó y nos dijo que 'va a preguntar en el área legal' cómo es el proceso para firmar documentos con proveedores nuevos."</p>
+                        <span class="tag-info">Paseo corporativo. Ninguna acción concreta ejecutada.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Terminó la reunión pero no llevamos el NDA impreso ni lo pedimos por miedo a dañar el buen ambiente o parecer muy agresivos."</p>
+                        <span class="tag-info">Falta de "Call to Action" por miedo al rechazo.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PERFIL B: LOS EMPÍRICOS -->
+        <!-- ========================================== -->
+        <div id="perfil-b" class="profile-content">
+            <div class="context-box" style="border-left-color: #FF9800;">
+                <h3 style="color: #FFB300;">Contexto: Agro, Salud y Modelos Operativos</h3>
+                <p><strong>Enfoque de Validación:</strong> Negocios híbridos donde la operación física choca con el software. El facilitador presiona para revelar los cuellos de botella manuales y los problemas de adopción tecnológica en terreno.</p>
+            </div>
+
+            <!-- Situación 1 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M1 - Tema 1: Arquitectura de Negocios como Sistema</h4>
+                    <p>💡 Hipótesis: "Podemos integrar masivamente los resultados PDF del laboratorio a la app del paciente en menos de 10 minutos."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Cronometramos el proceso real en clínica. El sistema backend tardó exactamente 8 minutos en sincronizar 50 exámenes vía API sin error humano."</p>
+                        <span class="tag-info">Comprobación de capacidad técnica real.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"La prueba en vivo falló porque los PDFs de la clínica venían como imagen. El servidor colapsó y tuvimos que transcribir todo a mano toda la noche."</p>
+                        <span class="tag-info">Límite técnico descubierto. El sistema se rompió.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"El desarrollador hizo un ping al servidor local y demostró teóricamente que la velocidad de transferencia de la base de datos es de milisegundos."</p>
+                        <span class="tag-info">Validación técnica aislada de la operación real.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"No pudimos probar con la red de la clínica, así que subimos 3 PDFs creados por nosotros mismos desde la oficina y funcionó rápido."</p>
+                        <span class="tag-info">Entorno falso. No se probó estrés ni condiciones reales.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 2 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M1 - Tema 2: Arquitectura de Entrega de Valor</h4>
+                    <p>💡 Hipótesis: "El agrónomo usará nuestra aplicación móvil en campo (sin internet) para registrar el avance de plagas."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Auditamos los logs (registros) de la app. El agrónomo hizo 15 registros 'offline' en terreno, que se sincronizaron al servidor automáticamente al llegar al pueblo."</p>
+                        <span class="tag-info">Uso del flujo tecnológico validado en entorno real.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Fuimos a campo. A los 10 minutos la app se trabó por la luz del sol impidiendo ver la pantalla. El agrónomo sacó su libreta de papel para anotar."</p>
+                        <span class="tag-info">El valor se rompió por factores ambientales no previstos.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"El agrónomo instaló la aplicación en su celular y nos prometió que mañana en su ronda sin falta la empieza a usar."</p>
+                        <span class="tag-info">Promesa de uso. El papel lo aguanta todo.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Le explicamos al agrónomo cómo usar los botones de la app mientras tomábamos un café en la ciudad con buena señal WiFi."</p>
+                        <span class="tag-info">Contexto erróneo. Se evadió el reto (falta de internet).</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 3 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M2 - Tema 3: Motor Emocional y Decisión de Adopción</h4>
+                    <p>💡 Hipótesis: "La urgencia por evitar las multas del INVIMA fuerza a las clínicas pequeñas a comprar nuestro software de trazabilidad hoy."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Una clínica firmó el contrato y pagó la instalación hoy mismo porque mañana tiene auditoría sorpresa del INVIMA y requiere los reportes impresos urgentes."</p>
+                        <span class="tag-info">Decisión forzada por un catalizador externo (riesgo).</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Descubrimos que la multa por no tener el reporte es de $50 USD. Como nuestro software cuesta $2,000 USD anuales, prefieren arriesgarse a pagar la multa."</p>
+                        <span class="tag-info">Cálculo de costo/beneficio en contra de la startup.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"En un focus group, los dueños de 5 clínicas nos manifestaron estar 'muy preocupados' y 'estresados' por la nueva normativa de salud."</p>
+                        <span class="tag-info">Queja emocional sin acción resolutiva asociada.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"En la reunión les asustamos leyendo artículos de la ley y posibles cierres de local, en lugar de preguntarles cómo lo resuelven hoy."</p>
+                        <span class="tag-info">Manipulación del cliente; no se midió su comportamiento autónomo.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 4 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M2 - Tema 4: Recorrido del Cliente</h4>
+                    <p>💡 Hipótesis: "El productor agrícola descubre y cotiza nuevas soluciones tecnológicas a través de grupos de WhatsApp de su cooperativa."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Entramos al celular del cliente (arqueología). Nos mostró que sus últimos 3 insumos los compró tras pedir recomendaciones en el grupo 'Agro Valle' de WhatsApp."</p>
+                        <span class="tag-info">Mapeo del viaje real basado en comportamientos pasados.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Auditamos a 5 productores y ninguno usa WhatsApp para negocios; nos mostraron que compran todo lo que el ingeniero agrónomo de la tienda del pueblo les receta."</p>
+                        <span class="tag-info">Canal de adquisición invalidado.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Un líder comunal nos aseguró en una reunión que 'la gente en esta región es muy tecnológica y usan el WhatsApp para todo'."</p>
+                        <span class="tag-info">Percepción de un tercero en lugar del usuario final.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Invertimos $100 USD en anuncios de Facebook para medir cuántos clics daban los agricultores, asumiendo que usan redes sociales de forma similar."</p>
+                        <span class="tag-info">Se probó un canal distinto a la hipótesis central (WhatsApp).</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 5 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M3 - Tema 2: Storytelling Basado en Evidencia</h4>
+                    <p>💡 Hipótesis: "Mostrar un video no editado de la máquina operando en terreno convence más al cliente que un render 3D de alta calidad del equipo."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Proyectamos el video celular de la máquina sucia operando bajo la lluvia en la granja. El cliente inmediatamente detuvo todo y pidió la cotización formal."</p>
+                        <span class="tag-info">El realismo provocó una decisión observable.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Mostramos el video y el cliente se alarmó por el excesivo ruido que hacía el motor en cámara, cancelando su intención inicial de compra."</p>
+                        <span class="tag-info">El artefacto de comunicación generó un rechazo genuino y útil.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Les mostramos ambos formatos (el render y el video) al final del pitch y nos dijeron 'las dos cosas se ven muy chéveres'."</p>
+                        <span class="tag-info">El cliente quiso ser amable; no hubo discriminación real.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"El video no cargó por la conexión a internet, así que terminamos explicándoles con las manos cómo se movía la máquina en el campo."</p>
+                        <span class="tag-info">Fallo técnico del facilitador; la hipótesis nunca se puso a prueba.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PERFIL C: LA NARRATIVA -->
+        <!-- ========================================== -->
+        <div id="perfil-c" class="profile-content">
+            <div class="context-box" style="border-left-color: #4CAF50;">
+                <h3 style="color: #81C784;">Contexto: Educación, Turismo, Idea / Biotecnología</h3>
+                <p><strong>Enfoque de Validación:</strong> Equipos sin producto maduro que abusan de encuestas, landing pages y promesas futuras. El facilitador debe destruir sus metodologías "blandas" y forzarlos a pedir dinero de inmediato (experimentos manuales o Mago de Oz).</p>
+            </div>
+
+            <!-- Situación 1 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M1 - Tema 1: Arquitectura de Negocios (Validación Mago de Oz)</h4>
+                    <p>💡 Hipótesis: "Podemos crear experiencias turísticas altamente personalizadas en menos de 24 horas usando Inteligencia Artificial y cobrar por ello."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"El cliente pagó el servicio, llenó el formulario, y nosotros usamos ChatGPT manualmente (sin decirle) para crear el itinerario. Se lo enviamos en 12 horas y quedó satisfecho."</p>
+                        <span class="tag-info">Operación manual validó la propuesta sin programar.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Vendimos el servicio manual, pero la IA recomendaba restaurantes cerrados en Medellín. Tardamos 3 días corrigiendo a mano. No tenemos capacidad de entregar en 24h."</p>
+                        <span class="tag-info">Colapso de capacidad técnica. Límite descubierto.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Generamos 5 guías PDF de prueba para viajes imaginarios a París usando GPT-4 y a nuestros amigos les parecieron súper completas."</p>
+                        <span class="tag-info">No hay cliente real ni transacción económica.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Estamos esperando a que la agencia termine de programar nuestra web con la API oficial de OpenAI en seis meses para salir al mercado a probar."</p>
+                        <span class="tag-info">Dilación. Evitaron el riesgo de probar hoy.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 2 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M1 - Tema 4: Finanzas (Pricing B2C)</h4>
+                    <p>💡 Hipótesis: "Los estudiantes universitarios están dispuestos a pagar $15 USD mensuales de su mesada por nuestra app de resúmenes automáticos."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Pusimos un botón real de PayU oculto en la presentación. De 50 clics, 3 estudiantes metieron los datos de su tarjeta y la transacción pasó (luego la reversamos)."</p>
+                        <span class="tag-info">Verdadera exposición al riesgo económico de perder dinero.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Salimos con datáfono a la universidad a vender suscripciones a $15 USD. De 50 estudiantes abordados, cero pagaron. 'Mejor le pido los apuntes a mi amiga'."</p>
+                        <span class="tag-info">Rechazo absoluto al modelo de ingresos.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Hicimos una encuesta en historias de Instagram preguntando: '¿Pagarías el equivalente a tres cafés por esta app?' y el 80% votó 'Sí'."</p>
+                        <span class="tag-info">Validación social sin fricción. Basura metodológica.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Pusimos un botón en la web que decía 'Precio $15' pero al hacer clic salía 'Próximamente, deja tu correo'. Logramos 30 correos."</p>
+                        <span class="tag-info">Se midió interés genérico, no disposición real de pago.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 3 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M2 - Tema 2: Comprensión Estratégica del Cliente</h4>
+                    <p>💡 Hipótesis: "Los padres de familia de estratos medios se sienten profundamente frustrados por la falta de robótica en sus colegios actuales."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Arqueología: Un papá nos enseñó en su banca móvil pagos mensuales de $80 USD a una academia privada de robótica sabatina porque en el colegio de su hijo no dan el tema."</p>
+                        <span class="tag-info">Dolor real verificado a través de un gasto alternativo autónomo.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Entrevistamos a 10 padres al salir del colegio y 8 nos dijeron: 'La verdad me da igual la robótica, lo único que quiero es que aprenda inglés'."</p>
+                        <span class="tag-info">El cliente desmintió la existencia del problema.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"La Asociación de Padres de Familia sacó un comunicado en Facebook diciendo que 'la tecnología y la robótica son fundamentales para el futuro de los niños'."</p>
+                        <span class="tag-info">Declaraciones públicas institucionales, no comportamiento individual.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Les dimos un taller de robótica gratis de 2 horas en el parque, y todos los niños se divirtieron y los papás nos agradecieron mucho."</p>
+                        <span class="tag-info">Validación distorsionada por entregar algo gratuito.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 4 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M2 - Tema 4: Recorrido del Cliente (Journey)</h4>
+                    <p>💡 Hipótesis: "El turista extranjero planea su ruta en Colombia usando blogs de viajes y Reddit, no agencias tradicionales."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Revisamos con permiso el celular de 3 turistas en el hostal. Nos mostraron que toda su ruta la sacaron ayer de hilos del foro 'Reddit Colombia' y un blog personal."</p>
+                        <span class="tag-info">Reconstrucción empírica de las decisiones del usuario.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Al indagar en 5 hoteles boutique, descubrimos que el 90% de esos huéspedes llegan con el paquete comprado en Europa desde la agencia Mundo Joven. No planean acá."</p>
+                        <span class="tag-info">El actor que toma la decisión está en otra parte del embudo.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"Leímos un artículo de la revista Forbes Travel que asegura que los Millennials prefieren organizar todo online por su propia cuenta."</p>
+                        <span class="tag-info">Reporte externo, sin validación en el mercado local.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Hicimos una encuesta preguntando: 'En una escala del 1 al 5, ¿qué tan útil le parecen los blogs de viaje?' y promediaron 4.5."</p>
+                        <span class="tag-info">Preguntas de actitud, no de comportamiento pasado.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situación 5 -->
+            <div class="scenario-block">
+                <div class="hypothesis-box">
+                    <h4>M3 - Tema 3: Presentación como Filtro de Continuidad</h4>
+                    <p>💡 Hipótesis: "El rector del colegio firmará una Carta de Intención (LOI) condicionada a que le demostremos que el sistema funciona."</p>
+                </div>
+                <div class="grid-container">
+                    <div class="evidence-card card-valid">
+                        <h5>✅ VÁLIDO (Cumple)</h5>
+                        <p>"Al terminar el pitch, el rector revisó el documento impreso de la LOI, le tachó una línea de 'exclusividad' con bolígrafo, y la firmó en el acto sobre la mesa."</p>
+                        <span class="tag-info">Acción física concreta que genera compromiso inicial.</span>
+                    </div>
+                    <div class="evidence-card card-invalid">
+                        <h5>❌ NO VÁLIDO (Fricción comprobada)</h5>
+                        <p>"Le pusimos el documento enfrente. El rector se echó para atrás y dijo: 'Nosotros no firmamos nada sin que la Secretaría de Educación autorice el proveedor'."</p>
+                        <span class="tag-info">Se identificó una fricción regulatoria que bloquea la venta.</span>
+                    </div>
+                    <div class="evidence-card card-weak">
+                        <h5>⚠️ DÉBIL (Insuficiente)</h5>
+                        <p>"El rector dijo: 'Excelente presentación, déjame el documento o envíamelo al correo y yo te lo firmo la próxima semana sin falta'."</p>
+                        <span class="tag-info">Promesa de firma sin materialización del acto.</span>
+                    </div>
+                    <div class="evidence-card card-noteval">
+                        <h5>⚪ NO EVALUABLE (Mal diseño)</h5>
+                        <p>"Llegamos al final de la reunión y no sacamos el documento impreso de la maleta porque sentimos que el rector estaba de afán y no queríamos incomodarlo."</p>
+                        <span class="tag-info">Auto-sabotaje del 'Call to Action' al momento del pitch.</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function openTab(evt, profileId) {
+            var i, tabcontent, tablinks;
+            
+            tabcontent = document.getElementsByClassName("profile-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].className = tabcontent[i].className.replace(" active", "");
+            }
+
+            tablinks = document.getElementsByClassName("tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            document.getElementById(profileId).style.display = "block";
+            setTimeout(() => {
+                document.getElementById(profileId).className += " active";
+            }, 10);
+            
+            evt.currentTarget.className += " active";
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch((err) => {
+                    console.log(`Error fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+        
+        document.addEventListener('fullscreenchange', (event) => {
+            const btn = document.querySelector('.btn-fullscreen');
+            if (document.fullscreenElement) {
+                btn.innerHTML = '❌ Salir de Pantalla Completa';
+            } else {
+                btn.innerHTML = '📺 Pantalla Completa';
+            }
+        });
+    </script>
+</body>
+</html>
